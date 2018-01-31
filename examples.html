@@ -1,0 +1,109 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>使用PlutoSDR构建简易通信系统</title>
+  <meta name="description" content="website description" />
+  <meta name="keywords" content="website keywords, website keywords" />
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <!-- modernizr enables HTML5 elements and feature detects -->
+  <script type="text/javascript" src="js/modernizr-1.5.min.js"></script>
+</head>
+
+<body>
+  <div id="main">
+    <header>
+      <div id="logo">
+        <div id="logo_text">
+          <!-- class="logo_colour", allows you to change the colour of the text -->
+          <h1><a href="index.html">构建简易通信系统</h1><span class="logo_colour">--PlutoSDR</span></a>
+          <h4>华中科技大学电子信息与通信学院15级课程设计</h4>
+        </div>
+      </div>
+      <nav>
+        <div id="menu_container">
+          <ul class="sf-menu" id="nav">
+            <li><a href="index.html">主页</a></li>
+            <li><a href="examples.html">原理</a></li>
+            <li><a href="page.html">过程</a></li>
+            <li><a href="doublesystem.html">代码</a>
+              <ul>
+                <li><a href="doublesystem.html">双系统通信</a></li>
+                <li><a href="triblesystem.html">三系统通信</a></li>
+              </ul>
+            </li>
+            <li><a href="another_page.html">感想</a></li>
+            <li><a href="contactus.html">联系我们</a></li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+    <div id="site_content">
+      <div id="sidebar_container">
+        <div class="sidebar">
+          <h3>参考资料</h3>
+
+          <p><a href="https://book.douban.com/subject/1391207/">计算机网络教材</a></p>
+          <p><a href="https://baike.baidu.com/item/%E9%80%9A%E4%BF%A1%E5%8E%9F%E7%90%86%EF%BC%88%E7%AC%AC7%E7%89%88%EF%BC%89/20311045?fr=aladdin">通信原理</a></p>
+          <p><a href="https://cn.mathworks.com/products/symbolic.html">mathwork</a></p>
+          <p><a href="https://wiki.analog.com/university/tools/pluto">wiki.analog</a></p>
+        </div>
+      </div>
+      <div class="content">
+        <h1>双系统通信原理</h1>
+        <p>将两个Pluto的收发频点错开，减少因为接收频点一样导致的乱码情况。使用的协议为停止等待协议。我们实现的停止等待协议如下：</p>
+        <p>将数据帧编码为0到9，若数据帧数量超过9，则重复编码为0到9；每次只发送一个数据帧，并设置超时等待时间为1秒。记录发送数据帧时的当前时间t1和接收到回复的当前时间t2,通过比较t2-t1与超时等待时间的大小来判断是否超时。</p>
+        <p style="font-weight:bold;">发送端具体情况有三种：</p>
+        <ol>
+          <li>在超时等待时间内收到回复ACK，此时传输下一个帧序号；</li>
+          <li>在超时等待时间内收到回复NACK，重新传输当前数据帧;</li>
+          <li>在超时等待时间内内未收到回复，重新传输当前帧。</li>
+        </ol>
+        <p style="font-weight:bold;">接收端具体情况有两种：</p>
+        <ol>
+          <li>当收到的数据帧序号与当前希望收到的数据帧序号相同，回复ACK；</li>
+          <li>若收到的数据帧序号与当前希望收到的数据帧序号不同或者收到的数据帧的乱码，回复NACK。</li>
+        </ol>
+        <h6>具体代码的实现是通过改变bpsk_demo.m、bpsk_tx_func.m以及bpsk_rx_func.m文件来实现。</h6>
+        <p></p>
+        <p></p>
+        <h1>三系统通信原理</h1>
+        <p>实现三个Pluto之间的通信，将一个Pluto作为接收端，两个Pluto分别作为发送端1和发送端2，同样将发收频点错开，减少乱码出现概率。使用协议为停止等待协议和载波监听多路访问/冲突避免机制。停止等待协议与两个系统通信的原理是一样的，我们实现的 载波监听多路访问/冲突避免机制实现原理如下：</p>
+        <p>在需要发送消息时，发送端1和发送端2分别向接收端发送请求消息，即1RTS和2RTS。接收端若收到了发送端1（或发送端2）的请求消息，则回复1CTS（或2CTS）。设置一个超时等待时间为1秒。记录发送请求时的时间为t1，记录接收到回复的时间为t2，比较t2-t1与超时等待时间的大小关系，从而判断是否超时。</p>
+        <p style="font-weight:bold;">发送端1（或发送端2）的具体情况有4种：</p>
+        <ol>
+          <li>在超时等待时间内未收到回复，则停止一段时间（设置为10秒）后重新发送请求；</li>
+          <li>在超时等待时间内收到1CTS（或2CTS），此时开始发送要传输的数据帧；</li>
+          <li>若在超时等待时间内未收到自己的回复消息（可能是乱码或者是属于另外发送端的回复消息），此时停止等待一段时间后重新发送请求；</li>
+          <li>若发送的消息已经传输完，发送over消息。</li>
+        </ol>
+
+        <p style="font-weight:bold;">接收端的具体情况有2种：</p>
+        <ol>
+          <li>收到1RTS（或者2RTS）的请求，则回复1CTS（或2CTS），并等待相应的发送端发送消息；</li>
+          <li>在通信过程中，若收到了over则重新等待新的发送端发送的请求消息，进行下一个循环。</li>
+        </ol>
+          <h6>具体代码的实现是通过改变bpsk_demo.m、bpsk_tx_func.m以及bpsk_rx_func.m文件来实现。</h6>
+      </div>
+    </div>
+    <div id="scroll">
+      <a title="Scroll to the top" class="top" href="#"><img src="images/top.png" alt="top" /></a>
+    </div>
+    <footer>
+      <p><a href="index.html">主页</a> | <a href="examples.html">原理</a> | <a href="page.html">过程</a> | <a href="another_page.html">感想</a> | <a href="contact.php">联系我们</a></p>
+      <p>Copyright &copy; 构建建议通信系统 </p>
+    </footer>
+  </div>
+  <!-- javascript at the bottom for fast page loading -->
+  <script type="text/javascript" src="js/jquery.js"></script>
+  <script type="text/javascript" src="js/jquery.easing-sooper.js"></script>
+  <script type="text/javascript" src="js/jquery.sooperfish.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      $('ul.sf-menu').sooperfish();
+      $('.top').click(function() {$('html, body').animate({scrollTop:0}, 'fast'); return false;});
+    });
+  </script>
+</body>
+</html>
